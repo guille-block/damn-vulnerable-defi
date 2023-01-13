@@ -1,9 +1,9 @@
 pragma solidity >=0.8;
 
-import "./FlashLoanerPool.sol";
-import "../DamnValuableToken.sol";
-import "./TheRewarderPool.sol";
-import "./RewardToken.sol";
+import "../../the-rewarder/FlashLoanerPool.sol";
+import "../../DamnValuableToken.sol";
+import "../../the-rewarder/TheRewarderPool.sol";
+import "../../the-rewarder/RewardToken.sol";
 
 contract AttackTheRewarderPool {
 

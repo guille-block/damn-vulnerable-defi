@@ -1,8 +1,8 @@
 pragma solidity >=0.7;
 
-import "./FreeRiderNFTMarketplace.sol";
+import "../../free-rider/FreeRiderNFTMarketplace.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
-import "../DamnValuableNFT.sol";
+import "../../DamnValuableNFT.sol";
 import "hardhat/console.sol";
 
 interface IUniswapV2Callee {

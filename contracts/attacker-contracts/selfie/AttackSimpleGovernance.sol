@@ -1,8 +1,8 @@
 pragma solidity >=0.8;
 
-import "./SelfiePool.sol";
-import "./SimpleGovernance.sol";
-import "../DamnValuableTokenSnapshot.sol";
+import "../../selfie/SelfiePool.sol";
+import "../../selfie/SimpleGovernance.sol";
+import "../../DamnValuableTokenSnapshot.sol";
 
 contract AttackSimpleGovernance {
 
